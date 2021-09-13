@@ -319,11 +319,11 @@ bool APerceptionNeuronController::Play(FString BVHFileName, bool bPlayEndless)
 	PlayerMotionLines.Empty();
 
 	// Load BVH file	
-	if (FFileHelper::LoadANSITextFileToStrings(*(FPaths::GameDir() + FString("Content/") + BVHFileName), NULL, PlayerMotionLines) != true)
+	if (FFileHelper::LoadANSITextFileToStrings(*(FPaths::ProjectDir() + FString("Content/") + BVHFileName), NULL, PlayerMotionLines) != true)
 	{
 		if (GEngine)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Could not load BVH file:%s"), *(FPaths::GameDir() + FString("Content/") + BVHFileName)));
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Could not load BVH file:%s"), *(FPaths::ProjectDir() + FString("Content/") + BVHFileName)));
 		}
 		return false;
 	}
@@ -331,7 +331,7 @@ bool APerceptionNeuronController::Play(FString BVHFileName, bool bPlayEndless)
 	// Parse BVH file, get frame time and beginning of motion line part
 	for (int32 i = 0; i < PlayerMotionLines.Num(); i++)
 	{
-		PlayerMotionLines[i].Trim();
+		PlayerMotionLines[i].TrimStartAndEndInline();
 
 		if (PlayerMotionLines[i].StartsWith(TEXT("Frames:"), ESearchCase::IgnoreCase) == true)
 		{

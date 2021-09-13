@@ -37,11 +37,11 @@ bool PerceptionNeuronBVHSkeleton::ParseBVHReferenceFile(FString BVHFileName)
 {
 	// Load BVH Reference file
 	TArray<FString> Lines;
-	if (FFileHelper::LoadANSITextFileToStrings(*(FPaths::GameDir() + FString("Content/") + BVHFileName), NULL, Lines) != true)
+	if (FFileHelper::LoadANSITextFileToStrings(*(FPaths::ProjectDir() + FString("Content/") + BVHFileName), NULL, Lines) != true)
 	{
 		if (GEngine)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Could not load BVH file:%s"), *(FPaths::GameDir() + FString("Content/") + BVHFileName)));
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Could not load BVH file:%s"), *(FPaths::ProjectDir() + FString("Content/") + BVHFileName)));
 		}
 		return false;
 	}
@@ -52,7 +52,7 @@ bool PerceptionNeuronBVHSkeleton::ParseBVHReferenceFile(FString BVHFileName)
 
 	for (FString &Line : Lines)
 	{
-		Line.Trim();
+		Line.TrimStartAndEndInline();
 		if ((Line.StartsWith(TEXT("ROOT"), ESearchCase::IgnoreCase) == true) ||
 			(Line.StartsWith(TEXT("JOINT"), ESearchCase::IgnoreCase) == true))
 		{
