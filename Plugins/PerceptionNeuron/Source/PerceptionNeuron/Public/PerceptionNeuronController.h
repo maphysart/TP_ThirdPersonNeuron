@@ -23,7 +23,7 @@
 
 
 // Supported motion line formats
-enum MotionLineFormatEnum { Standard, Neuron };
+enum MotionLineFormatEnum { Standard, Neuron, Ubisoft };
 
 UCLASS()
 class APerceptionNeuronController : public AActor

@@ -166,11 +166,24 @@ void APerceptionNeuronController::Tick(float DeltaTime)
 									FloatsPerBone = 3;	// If there is no displacement (translation) info we have only 3 floats for rotation left
 								if (bReference == false)
 									FloatsPerReference = 0;
-								// Check if empty spaces matches bone count
-								if (t == ((Skeleton.BoneNr * FloatsPerBone) + FloatsPerReference - 1))
+
+								if (MotionLineFormat == Standard)
 								{
-									k = i;
-									break;
+									// Check if empty spaces matches bone count
+									if (t == ((Skeleton.BoneNr * FloatsPerBone) + FloatsPerReference - 1))
+									{
+										k = i;
+										break;
+									}
+								}
+								if (MotionLineFormat == Ubisoft)
+								{
+									// root has 6 channels, and other joints have only 3 channels for rotation
+									if (t == ((Skeleton.BoneNr - 1) * FloatsPerBone + 6 + FloatsPerReference - 1))
+									{
+										k = i;
+										break;
+									}
 								}
 							}
 						}

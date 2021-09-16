@@ -50,7 +50,8 @@ UENUM(BlueprintType)
 enum class ENeuronMotionLineFormatEnum : uint8
 {
 	VE_Standard		UMETA(DisplayName = "Standard", ToolTip = "BVH Standard format (only the float numbers and a CR or LF at line ending)."),
-	VE_Neuron 		UMETA(DisplayName = "Neuron", ToolTip = "Axis Neuron BVH live format (with character name at beginning and || at line ending).")
+	VE_Neuron 		UMETA(DisplayName = "Neuron", ToolTip = "Axis Neuron BVH live format (with character name at beginning and || at line ending)."),
+	VE_Ubisoft 		UMETA(DisplayName = "Ubisoft", ToolTip = "Ubisoft BVH filemat with only rotation data for joints except root joint.")
 };
 
 UENUM(BlueprintType)
@@ -83,7 +84,8 @@ enum class ENeuronChannelNumberEnum : uint8
 	VE_2			UMETA(DisplayName = "2"),
 	VE_3			UMETA(DisplayName = "3"),
 	VE_4			UMETA(DisplayName = "4"),
-	VE_5	 		UMETA(DisplayName = "5")
+	VE_5	 		UMETA(DisplayName = "5"),
+	VE_N			UMETA(DisplayName = "N")
 };
 
 // Bones delivered in the Perception Neuron live stream
@@ -169,7 +171,7 @@ class UPerceptionNeuronBPLibrary : public UBlueprintFunctionLibrary
 
 	// Init functions
 	UFUNCTION(BlueprintCallable, Category = "Perception Neuron", meta = (DisplayName = "Init Neuron File", ToolTip = "Init BVH reference skeleton with a BVH file."))
-		static bool NeuronInitFile(APerceptionNeuronController *Controller, const FString BVHFileName = FString(TEXT("axis.bvh")));
+		static bool NeuronInitFile(APerceptionNeuronController *Controller, const FString BVHFileName = FString(TEXT("axis.bvh")), ENeuronMotionLineFormatEnum MotionLineFormat = ENeuronMotionLineFormatEnum::VE_Standard);
 	UFUNCTION(BlueprintCallable, Category = "Perception Neuron", meta = (DisplayName = "Init Neuron", ToolTip = "Init BVH reference skeleton manually."))
 		static bool NeuronInit(APerceptionNeuronController *Controller, int32 BoneNumber = 59, ENeuronRotOrderEnum RotationOrder = ENeuronRotOrderEnum::VE_YXZ, ENeuronChannelNumberEnum XPositionChannel = ENeuronChannelNumberEnum::VE_0, ENeuronChannelNumberEnum YPositionChannel = ENeuronChannelNumberEnum::VE_1, ENeuronChannelNumberEnum ZPositionChannel = ENeuronChannelNumberEnum::VE_2, ENeuronChannelNumberEnum XRotationChannel = ENeuronChannelNumberEnum::VE_4, ENeuronChannelNumberEnum YRotationChannel = ENeuronChannelNumberEnum::VE_3, ENeuronChannelNumberEnum ZRotationChannel = ENeuronChannelNumberEnum::VE_5);
 	UFUNCTION(BlueprintCallable, Category = "Perception Neuron", meta = (DisplayName = "Bone Set Offset", ToolTip = "Configure BVH bone offset. This offset is removed from the incoming translation before coordinate mapping."))
@@ -177,13 +179,13 @@ class UPerceptionNeuronBPLibrary : public UBlueprintFunctionLibrary
 
 	// Network functions
 	UFUNCTION(BlueprintCallable, Category = "Perception Neuron", meta = (DisplayName = "Connect Neuron", ToolTip = "Connect to Axis Neuron Playser."))
-		static bool NeuronConnect(APerceptionNeuronController *Controller, const FString HostName = FString(TEXT("127.0.0.1")), int32 Port = 7001, bool bReference = false, bool bDisplacement = true, ENeuronMotionLineFormatEnum MotionLineFormat = ENeuronMotionLineFormatEnum::VE_Neuron);
+		static bool NeuronConnect(APerceptionNeuronController *Controller, const FString HostName = FString(TEXT("127.0.0.1")), int32 Port = 7001, bool bReference = false, bool bDisplacement = true, ENeuronMotionLineFormatEnum MotionLineFormat = ENeuronMotionLineFormatEnum::VE_Ubisoft);
 	UFUNCTION(BlueprintCallable, Category = "Perception Neuron", meta = (DisplayName = "Disconnect Neuron", ToolTip = "Disconnect from Axis Neuron Player."))
 		static bool NeuronDisconnect(APerceptionNeuronController *Controller);
 
 	// Player functions
 	UFUNCTION(BlueprintCallable, Category = "Perception Neuron", meta = (DisplayName = "Play BVH File", ToolTip = "Play a local stored BVH file."))
-		static bool NeuronPlay(APerceptionNeuronController *Controller, FString BVHFileName = FString(TEXT("test.bvh")), bool bEndless = true, bool bReference = false, bool bDisplacement = true, ENeuronMotionLineFormatEnum MotionLineFormat = ENeuronMotionLineFormatEnum::VE_Standard);
+		static bool NeuronPlay(APerceptionNeuronController *Controller, FString BVHFileName = FString(TEXT("test.bvh")), bool bEndless = true, bool bReference = false, bool bDisplacement = true, ENeuronMotionLineFormatEnum MotionLineFormat = ENeuronMotionLineFormatEnum::VE_Ubisoft);
 	UFUNCTION(BlueprintCallable, Category = "Perception Neuron", meta = (DisplayName = "Pause playing BVH File", ToolTip = "Pause playing a local stored BVH file"))
 		static bool NeuronPause(APerceptionNeuronController *Controller, bool bPause = false);
 	UFUNCTION(BlueprintCallable, Category = "Perception Neuron", meta = (DisplayName = "Rewind BVH File Player", ToolTip = "Rewind BVH file player."))

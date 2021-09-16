@@ -14,6 +14,20 @@
 #pragma once
 #include "Engine.h"
 
+enum ChannelNumberEnum
+{
+	VE_0,
+	VE_1,
+	VE_2,
+	VE_3,
+	VE_4,
+	VE_5,
+	VE_N
+};
+
+// Supported motion line format
+enum LineFormatEnum { Standard_Format, Neuron_Format, Ubisoft_Format};
+
 // Supported rotation matrices
 enum ChannelOrderEnum { XYZ, XZY, YXZ, YZX, ZXY, ZYX };
 

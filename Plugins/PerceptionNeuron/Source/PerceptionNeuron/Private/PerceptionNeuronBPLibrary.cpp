@@ -22,7 +22,7 @@ UPerceptionNeuronBPLibrary::UPerceptionNeuronBPLibrary(const FObjectInitializer&
 }
 
 // Init with file and read BVH reference skeleton
-bool UPerceptionNeuronBPLibrary::NeuronInitFile(APerceptionNeuronController *Controller, FString BVHFileName)
+bool UPerceptionNeuronBPLibrary::NeuronInitFile(APerceptionNeuronController *Controller, FString BVHFileName, ENeuronMotionLineFormatEnum MotionLineFormat)
 {
 	if (Controller == nullptr)
 	{
@@ -33,7 +33,7 @@ bool UPerceptionNeuronBPLibrary::NeuronInitFile(APerceptionNeuronController *Con
 		return false;
 	}
 
-	if (Controller->Skeleton.ParseBVHReferenceFile(BVHFileName) != true)
+	if (Controller->Skeleton.ParseBVHReferenceFile(BVHFileName, (LineFormatEnum)MotionLineFormat) != true)
 		return false;
 
 	return true;
@@ -53,6 +53,7 @@ bool UPerceptionNeuronBPLibrary::NeuronInit(APerceptionNeuronController *Control
 
 	Controller->Skeleton.BoneNr = BoneNr;
 	Controller->Skeleton.BonesSetRotOrder((ChannelOrderEnum)RotationOrder);
+	// TODO should consider the case that ENeuronChannelNumberEnum' value is VE_N 
 	return Controller->Skeleton.BonesSetChannels((uint8)XPos, (uint8)YPos, (uint8)ZPos, (uint8)XRot, (uint8)YRot, (uint8)ZRot);
 }
 
@@ -87,6 +88,8 @@ bool UPerceptionNeuronBPLibrary::NeuronConnect(APerceptionNeuronController *Cont
 	Controller->bDisplacement = bDisplacement;
 	if (MotionLineFormat == ENeuronMotionLineFormatEnum::VE_Neuron)
 		Controller->MotionLineFormat = Neuron;
+	else if (MotionLineFormat == ENeuronMotionLineFormatEnum::VE_Ubisoft)
+		Controller->MotionLineFormat = Ubisoft;
 	else
 		Controller->MotionLineFormat = Standard;
 
@@ -129,6 +132,8 @@ bool UPerceptionNeuronBPLibrary::NeuronPlay(APerceptionNeuronController *Control
 	Controller->bDisplacement = bDisplacement;
 	if (MotionLineFormat == ENeuronMotionLineFormatEnum::VE_Neuron)
 		Controller->MotionLineFormat = Neuron;
+	else if (MotionLineFormat == ENeuronMotionLineFormatEnum::VE_Ubisoft)
+		Controller->MotionLineFormat = Ubisoft;
 	else
 		Controller->MotionLineFormat = Standard;
 
@@ -201,15 +206,60 @@ bool UPerceptionNeuronBPLibrary::NeuronRead(APerceptionNeuronController *Control
 	}
 
 	int32 FloatsPerBone = 6; // 3 for x,y,z translation and 3 for x,y,z rotation
-	if (Controller->bDisplacement == false)
+	if (Controller->MotionLineFormat == MotionLineFormatEnum::Ubisoft)
 	{
-		FloatsPerBone = 3;	// If there is no displacement (translation) info we have only 3 floats for rotation left
+		// when using ubisoft format, the bDisplacement must be set to false
+		if (Controller->bDisplacement == true)
+		{
+			if (GEngine)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("ubisoft vbh format must set EnableDisplacement flag to false.")));
+			}
+			return false;
+		}
+		else
+		{
+			FloatsPerBone = 3;
+		}
 	}
-	if ((BVHBoneIndex * FloatsPerBone) > Controller->FloatCount)
+	else
 	{
-		Rotation.Yaw = Rotation.Pitch = Rotation.Roll = 0;
-		Translation.X = Translation.Y = Translation.Z = 0;
-		return false;
+		if (Controller->bDisplacement == false)
+		{
+			FloatsPerBone = 3;	// If there is no displacement (translation) info we have only 3 floats for rotation left
+		}
+	}
+	
+	if (Controller->MotionLineFormat == MotionLineFormatEnum::Ubisoft)
+	{
+		if (BVHBone == EPerceptionNeuronBonesEnum::VE_Hips)
+		{
+			// the root bone has 6 channels
+			if (6 > Controller->FloatCount)
+			{
+				Rotation.Yaw = Rotation.Pitch = Rotation.Roll = 0;
+				Translation.X = Translation.Y = Translation.Z = 0;
+				return false;
+			}
+		}
+		else
+		{
+			if ((BVHBoneIndex * FloatsPerBone + 6) > Controller->FloatCount)
+			{
+				Rotation.Yaw = Rotation.Pitch = Rotation.Roll = 0;
+				Translation.X = Translation.Y = Translation.Z = 0;
+				return false;
+			}
+		}
+	}
+	else
+	{
+		if ((BVHBoneIndex * FloatsPerBone) > Controller->FloatCount)
+		{
+			Rotation.Yaw = Rotation.Pitch = Rotation.Roll = 0;
+			Translation.X = Translation.Y = Translation.Z = 0;
+			return false;
+		}
 	}
 
 	// Get the rotation of the reference pose bone
@@ -228,23 +278,42 @@ bool UPerceptionNeuronBPLibrary::NeuronRead(APerceptionNeuronController *Control
 	//
 	// Translation
 	//
-
-	if (Controller->bDisplacement == true)
+	bool needSetTranslation = false;
+	if (Controller->MotionLineFormat == MotionLineFormatEnum::Ubisoft)
 	{
+		if (BVHBone == EPerceptionNeuronBonesEnum::VE_Hips)
+		{
+			needSetTranslation = true;
+		}
+	}
+	else
+	{
+		if (Controller->bDisplacement == true)
+		{
+			needSetTranslation = true;
+		}
+	}
+	if (needSetTranslation)
+	{
+		int BeginPos = BVHBoneIndex * FloatsPerBone;
+		if (Controller->MotionLineFormat == MotionLineFormatEnum::Ubisoft && BVHBone == EPerceptionNeuronBonesEnum::VE_Hips)
+		{
+			BeginPos = 0;
+		}
 		// Read translation values and remove BVH reference position
-		float X = Controller->MotionLine[(BVHBoneIndex * FloatsPerBone) + Controller->Skeleton.Bones[BVHBoneIndex].XPos] - Controller->Skeleton.Bones[BVHBoneIndex].Offset[0];
-		float Y = Controller->MotionLine[(BVHBoneIndex * FloatsPerBone) + Controller->Skeleton.Bones[BVHBoneIndex].YPos] - Controller->Skeleton.Bones[BVHBoneIndex].Offset[1];
-		float Z = Controller->MotionLine[(BVHBoneIndex * FloatsPerBone) + Controller->Skeleton.Bones[BVHBoneIndex].ZPos] - Controller->Skeleton.Bones[BVHBoneIndex].Offset[2];
+		float X = Controller->MotionLine[BeginPos + Controller->Skeleton.Bones[BVHBoneIndex].XPos] - Controller->Skeleton.Bones[BVHBoneIndex].Offset[0];
+		float Y = Controller->MotionLine[BeginPos + Controller->Skeleton.Bones[BVHBoneIndex].YPos] - Controller->Skeleton.Bones[BVHBoneIndex].Offset[1];
+		float Z = Controller->MotionLine[BeginPos + Controller->Skeleton.Bones[BVHBoneIndex].ZPos] - Controller->Skeleton.Bones[BVHBoneIndex].Offset[2];
 
 		// Map BVH translation to UE4 world coordinate system (Inverse if forward direction is -Y)
 		if (InverseForward)
 		{
 			Translation = FVector(-X, -Z, Y);
-		}			
+		}
 		else
 		{
 			Translation = FVector(X, Z, Y);
-		}			
+		}
 
 		// Map UE4 world translation to bone space	
 		Translation = RefQuat.Inverse().RotateVector(Translation);
@@ -263,11 +332,26 @@ bool UPerceptionNeuronBPLibrary::NeuronRead(APerceptionNeuronController *Control
 	//
 	// Rotation 
 	//
+	float XR = 0, YR = 0, ZR = 0;
+	if (Controller->MotionLineFormat == MotionLineFormatEnum::Ubisoft)
+	{
+		int BeginPos;
+		if (BVHBone == EPerceptionNeuronBonesEnum::VE_Hips)
+			BeginPos = 0;
+		else
+			BeginPos = (BVHBoneIndex - 1) * FloatsPerBone + 6;
 
-	// Read rotation values and map to pitch, yaw, roll (y, z, x)
-	float XR = Controller->MotionLine[(BVHBoneIndex * FloatsPerBone) + Controller->Skeleton.Bones[BVHBoneIndex].XRot] * PI / 180.f;
-	float YR = Controller->MotionLine[(BVHBoneIndex * FloatsPerBone) + Controller->Skeleton.Bones[BVHBoneIndex].YRot] * PI / 180.f;
-	float ZR = Controller->MotionLine[(BVHBoneIndex * FloatsPerBone) + Controller->Skeleton.Bones[BVHBoneIndex].ZRot] * PI / 180.f;
+		XR = Controller->MotionLine[BeginPos + Controller->Skeleton.Bones[BVHBoneIndex].XRot] * PI / 180.f;
+		YR = Controller->MotionLine[BeginPos + Controller->Skeleton.Bones[BVHBoneIndex].YRot] * PI / 180.f;
+		ZR = Controller->MotionLine[BeginPos + Controller->Skeleton.Bones[BVHBoneIndex].ZRot] * PI / 180.f;
+	}
+	else
+	{
+		// Read rotation values and map to pitch, yaw, roll (y, z, x)
+		XR = Controller->MotionLine[(BVHBoneIndex * FloatsPerBone) + Controller->Skeleton.Bones[BVHBoneIndex].XRot] * PI / 180.f;
+		YR = Controller->MotionLine[(BVHBoneIndex * FloatsPerBone) + Controller->Skeleton.Bones[BVHBoneIndex].YRot] * PI / 180.f;
+		ZR = Controller->MotionLine[(BVHBoneIndex * FloatsPerBone) + Controller->Skeleton.Bones[BVHBoneIndex].ZRot] * PI / 180.f;
+	}
 
 	// Calculate Rotation Matrix and map to Quaternion
 	FQuat BVHQuat = CalculateQuat(XR, YR, ZR, Controller->Skeleton.Bones[BVHBoneIndex].RotOrder);

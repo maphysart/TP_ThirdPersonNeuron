@@ -16,7 +16,6 @@
 #include "Engine.h"
 #include "PerceptionNeuronMath.h"
 
-
 #define MAXBONES	100
 
 class PerceptionNeuronBVHSkeleton
@@ -26,7 +25,7 @@ public:
 	PerceptionNeuronBVHSkeleton();
 
 	// Parse BVH reference file
-	bool ParseBVHReferenceFile(FString BVHFileName);
+	bool ParseBVHReferenceFile(FString BVHFileName, LineFormatEnum MotionLineFormat);
 
 	// Set rotation order on all bones
 	void BonesSetRotOrder(ChannelOrderEnum RotOrder);

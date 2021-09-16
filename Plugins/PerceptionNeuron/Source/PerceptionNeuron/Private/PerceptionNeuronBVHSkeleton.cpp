@@ -33,7 +33,7 @@ PerceptionNeuronBVHSkeleton::PerceptionNeuronBVHSkeleton()
 }
 
 // Parse BVH reference file
-bool PerceptionNeuronBVHSkeleton::ParseBVHReferenceFile(FString BVHFileName)
+bool PerceptionNeuronBVHSkeleton::ParseBVHReferenceFile(FString BVHFileName, LineFormatEnum MotionLineFormat)
 {
 	// Load BVH Reference file
 	TArray<FString> Lines;
@@ -83,33 +83,77 @@ bool PerceptionNeuronBVHSkeleton::ParseBVHReferenceFile(FString BVHFileName)
 			if (Line.ParseIntoArray(Words, TEXT(" "), false) >= 4)
 			{
 				Bones[Bone].ChannelCount = FCString::Atoi(*Words[1]);
-				if (Bones[Bone].ChannelCount != 6)
+				if (MotionLineFormat == LineFormatEnum::Ubisoft_Format)
 				{
-					if (GEngine)
+					bool channelCountError = false;
+					if (Bone == 0 && Bones[Bone].ChannelCount != 6)
 					{
-						GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Channelcount must be 6 on bone:%u"), Bone));
+						channelCountError = true;
 					}
-					return false;
+					if (Bone > 0 && Bones[Bone].ChannelCount != 3)
+					{	
+						channelCountError = true;
+					}
+					if (channelCountError)
+					{
+						if (GEngine)
+						{
+							GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Channelcount must be 6 on bone:%u"), Bone));
+						}
+						return false;
+					}
+
+					Bones[Bone].XPos = Bones[Bone].YPos = Bones[Bone].ZPos = ChannelNumberEnum::VE_N;
+					Bones[Bone].XRot = Bones[Bone].YRot = Bones[Bone].ZRot = ChannelNumberEnum::VE_N;
+					for (int32 j = 0; j < Bones[Bone].ChannelCount; j++)
+					{
+						// Detect channel order
+						// E.g.: Xposition Yposition Zposition Xrotation Yrotation Zrotation
+						if (Words[j + 2].StartsWith(TEXT("Xposition"), ESearchCase::IgnoreCase) == true)
+							Bones[Bone].XPos = j;
+						else if (Words[j + 2].StartsWith(TEXT("Yposition"), ESearchCase::IgnoreCase) == true)
+							Bones[Bone].YPos = j;
+						else if (Words[j + 2].StartsWith(TEXT("Zposition"), ESearchCase::IgnoreCase) == true)
+							Bones[Bone].ZPos = j;
+						else if (Words[j + 2].StartsWith(TEXT("Xrotation"), ESearchCase::IgnoreCase) == true)
+							Bones[Bone].XRot = j;
+						else if (Words[j + 2].StartsWith(TEXT("Yrotation"), ESearchCase::IgnoreCase) == true)
+							Bones[Bone].YRot = j;
+						else if (Words[j + 2].StartsWith(TEXT("Zrotation"), ESearchCase::IgnoreCase) == true)
+							Bones[Bone].ZRot = j;
+					}
 				}
-				Bones[Bone].XPos = Bones[Bone].YPos = Bones[Bone].ZPos = 0;
-				Bones[Bone].XRot = Bones[Bone].YRot = Bones[Bone].ZRot = 0;
-				for (int32 j = 0; j < Bones[Bone].ChannelCount; j++)
+				else
 				{
-					// Detect channel order
-					// E.g.: Xposition Yposition Zposition Xrotation Yrotation Zrotation
-					if (Words[j + 2].StartsWith(TEXT("Xposition"), ESearchCase::IgnoreCase) == true)
-						Bones[Bone].XPos = j;
-					else if (Words[j + 2].StartsWith(TEXT("Yposition"), ESearchCase::IgnoreCase) == true)
-						Bones[Bone].YPos = j;
-					else if (Words[j + 2].StartsWith(TEXT("Zposition"), ESearchCase::IgnoreCase) == true)
-						Bones[Bone].ZPos = j;
-					else if (Words[j + 2].StartsWith(TEXT("Xrotation"), ESearchCase::IgnoreCase) == true)
-						Bones[Bone].XRot = j;
-					else if (Words[j + 2].StartsWith(TEXT("Yrotation"), ESearchCase::IgnoreCase) == true)
-						Bones[Bone].YRot = j;
-					else if (Words[j + 2].StartsWith(TEXT("Zrotation"), ESearchCase::IgnoreCase) == true)
-						Bones[Bone].ZRot = j;
+					if (Bones[Bone].ChannelCount != 6)
+					{
+						if (GEngine)
+						{
+							GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Channelcount must be 6 on bone:%u"), Bone));
+						}
+						return false;
+					}
+					Bones[Bone].XPos = Bones[Bone].YPos = Bones[Bone].ZPos = 0;
+					Bones[Bone].XRot = Bones[Bone].YRot = Bones[Bone].ZRot = 0;
+					for (int32 j = 0; j < Bones[Bone].ChannelCount; j++)
+					{
+						// Detect channel order
+						// E.g.: Xposition Yposition Zposition Xrotation Yrotation Zrotation
+						if (Words[j + 2].StartsWith(TEXT("Xposition"), ESearchCase::IgnoreCase) == true)
+							Bones[Bone].XPos = j;
+						else if (Words[j + 2].StartsWith(TEXT("Yposition"), ESearchCase::IgnoreCase) == true)
+							Bones[Bone].YPos = j;
+						else if (Words[j + 2].StartsWith(TEXT("Zposition"), ESearchCase::IgnoreCase) == true)
+							Bones[Bone].ZPos = j;
+						else if (Words[j + 2].StartsWith(TEXT("Xrotation"), ESearchCase::IgnoreCase) == true)
+							Bones[Bone].XRot = j;
+						else if (Words[j + 2].StartsWith(TEXT("Yrotation"), ESearchCase::IgnoreCase) == true)
+							Bones[Bone].YRot = j;
+						else if (Words[j + 2].StartsWith(TEXT("Zrotation"), ESearchCase::IgnoreCase) == true)
+							Bones[Bone].ZRot = j;
+					}
 				}
+				
 				// Calculate rotation order
 				if ((Bones[Bone].XRot < Bones[Bone].YRot) && (Bones[Bone].YRot < Bones[Bone].ZRot)) // e.g. 123
 					Bones[Bone].RotOrder = XYZ;
