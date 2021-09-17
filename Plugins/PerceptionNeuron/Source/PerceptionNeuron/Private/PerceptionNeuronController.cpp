@@ -175,6 +175,14 @@ void APerceptionNeuronController::Tick(float DeltaTime)
 										k = i;
 										break;
 									}
+									else
+									{
+										if (GEngine)
+										{
+											GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, 
+												FString::Printf(TEXT("motion line length %d != joints data %d."), t, ((Skeleton.BoneNr* FloatsPerBone) + FloatsPerReference - 1)));
+										}
+									}
 								}
 								if (MotionLineFormat == Ubisoft)
 								{
@@ -183,6 +191,14 @@ void APerceptionNeuronController::Tick(float DeltaTime)
 									{
 										k = i;
 										break;
+									}
+									else
+									{
+										if (GEngine)
+										{
+											GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red,
+												FString::Printf(TEXT("motion line length %d != joints data %d."), t, ((Skeleton.BoneNr * FloatsPerBone) + FloatsPerReference - 1)));
+										}
 									}
 								}
 							}
@@ -266,7 +282,7 @@ bool APerceptionNeuronController::Connect(FString HostName, int32 Port)
 	ISocketSubsystem* const SocketSubSystem = ISocketSubsystem::Get(); 
 	if (SocketSubSystem)
 	{
-		ReceiverSocket = SocketSubSystem->CreateSocket(NAME_Stream, TEXT("PerceptionNeuronSocket"), false);
+		ReceiverSocket = SocketSubSystem->CreateSocket(NAME_Stream, TEXT("PerceptionNeuronSocket"), true);
 		if (ReceiverSocket == NULL)
 			return false;
 	
